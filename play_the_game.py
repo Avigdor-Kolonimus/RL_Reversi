@@ -6,12 +6,15 @@ from agents.agent_pg import Agent_PG
 from agents.agent_dqn import Agent_DQN
 from agents.agent_ddqn import Agent_DDQN
 from reversi.reversi_env import Reversi
+from alfazero.mcts import MonteCarloTreeSearch, TreeNode
+from alfazero.neural_net import NeuralNetworkWrapper
+from alfazero.config import CFG
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Code to read command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--model",
-                    help="Pick a model to play with (0 - PG (default); 1 - DQN;).",
+                    help="Pick a model to play with (0 - PG (default); 1 - DQN; 2 - DDQN; 3 - AlphaZero;).",
                     dest="model",
                     type=int,
                     default=0)
@@ -74,6 +77,42 @@ def play(HUMAN_vs_MACHINE=True, machine=object):
         cv2.waitKey()
         env.close()    
 
+def playAlfaZero():
+    env = Reversi()
+    net = NeuralNetworkWrapper(env)
+
+    mcts = MonteCarloTreeSearch(net)
+    game = env.clone()  # Create a fresh clone for each game.
+    node = TreeNode()
+
+    if HUMAN_vs_MACHINE:  # human vs machine
+        for ep in range(1):
+            obs, info = game.reset()  # {"next_player": self.next_player, "next_possible_actions":
+            game.render()  # show the initialization
+            while True:
+                if info["next_player"] == "Blue":  # machine's turn
+                    best_child = mcts.search(game, node, CFG.temp_final)
+                else:  # human's turn
+                    action = game.get_human_action()
+                    best_child = TreeNode()
+                    best_child.action = (1, action[0], action[1])
+            
+                action = (best_child.action[1], best_child.action[2])
+                obs, _, done, info = game.step(action)
+                # game.play_action(action)  # Play the child node's action.
+
+                # done, _ = game.check_game_over(game.current_player)
+
+                best_child.parent = None
+                node = best_child  # Make the child node the root node.
+
+                game.render()
+                if done:
+                    break
+            cv2.waitKey(3000)  # wait for 3 seconds after the end of each ep
+        cv2.waitKey()
+        game.close()
+        env.close()
 
 if __name__ == "__main__":
     arguments = parser.parse_args()
@@ -85,6 +124,8 @@ if __name__ == "__main__":
         playDGN(HUMAN_vs_MACHINE)
     elif arguments.model == 2:
         playDDGN(HUMAN_vs_MACHINE)
+    elif arguments.model == 3:
+        playAlfaZero()
     else:
         print("Invalid input")
 

@@ -10,7 +10,6 @@ from agents.utils import Brain, Memory
 np.random.seed(47)
 random.seed(47)
 
-# Deep Q Network (DQN) Algorithms
 class Agent_DQN(nn.Module):
     def __init__(self, player="Red", device=torch.device("cuda")):
         super(Agent_DQN, self).__init__()

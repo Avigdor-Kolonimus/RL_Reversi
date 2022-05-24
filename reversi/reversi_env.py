@@ -1,14 +1,17 @@
 import os
 import gym
 import cv2
-import time
+# import time
 import random
 
 import numpy as np
-import matplotlib.pyplot as plt
-import PIL.Image as Image
+# import matplotlib.pyplot as plt
+# import PIL.Image as Image
 
 from gym import Env, spaces
+from copy import deepcopy
+# from reversi2.game import Game
+from collections import Counter
 
 # global variable
 font = cv2.FONT_HERSHEY_TRIPLEX
@@ -25,24 +28,26 @@ class Disk:
         assert color in ["Red", "Blue"], "invalid color"
         self.shape = (50, 50)  # red and blue disks are of 50 pi in height by 50 pi in width, these are fixed values
 
-
 class Red(Disk):
     def __init__(self):
         super(Red, self).__init__(color="Red")
         self.icon = cv2.imread(os.path.join("images", "red_disk.png"))
-
 
 class Blue(Disk):
     def __init__(self):
         super(Blue, self).__init__(color="Blue")
         self.icon = cv2.imread(os.path.join("images", "blue_disk.png"))
 
-
 class Reversi:
     def __init__(self, human_VS_machine=False):
         super(Reversi, self).__init__()
         self.canvas_shape = (620, 520, 3)  # the chess board, 620 pi in height by 520 pi in width
         self.observation_shape = (8, 8)  # it is a 8 row by 8 col grid
+        
+        self.row = 8
+        self.column = 8
+        self.action_size = self.row * self.column
+
         self.observation_space = spaces.Discrete(8 * 8)  # the observation is a very large discrete space, and I do not want to use it
 
         self.action_space = spaces.Discrete(8 * 8)  # 64 locations
@@ -58,20 +63,45 @@ class Reversi:
             ((428, 17), (428, 78), (428, 140), (428, 202), (428, 264), (428, 324), (428, 386), (428, 446)),
             ((490, 17), (490, 78), (490, 140), (490, 202), (490, 264), (490, 324), (490, 386), (490, 446)),
             ((550, 17), (550, 78), (550, 140), (550, 202), (550, 264), (550, 324), (550, 386), (550, 446)))
+        
+        self.grids = [[EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, RED, BLU, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, BLU, RED, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
+                      ]  # 0=empty, -1=red, 1=blue
+
         self.red = Red()  # red disk
         self.blue = Blue() # blue disk
         self.red_counter_coor = (205, 83)  # (x, y) of the bottom-left of the text, x: horizontal dist, y: vertical dist, where to display the number of red disks
         self.blue_counter_coor = (285, 83)  # where to display the number of blue disks
         self.winner_display_coor = (235, 40)  # where to display the winner
         self.prompt_display_coor = (195, 40)  # where to display hints, e.g., next player, game over, winner
+        
         self.next_player = "Red"  # red alwayst take the first turn
+        self.current_player = RED  # red alwayst take the first turn
+        
         self.red_count = 2  # initial count
         self.blue_count = 2  # initial count
         self.done = False
         self.next_possible_actions = set()  # a set of the possible coordinates (row, col) for the next player
         self.show_next_possible_actions_hint = True  # if True, show a red plus sign in the grid where the player is allowed to put a disk
         self.dirs = ((0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1))  # eight directions
+        self.directions = {
+            0: (-1, -1),
+            1: (-1, 0),
+            2: (-1, 1),
+            3: (0, -1),
+            4: (0, 1),
+            5: (1, -1),
+            6: (1, 0),
+            7: (1, 1)
+        }
         self.human_VS_machine = human_VS_machine
+        self.next_possible_actions = self.__get_possible_actions(color="Red")
 
     def reset(self):
         """
@@ -87,10 +117,13 @@ class Reversi:
                       [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
                       [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
                       [EMP, EMP, EMP, EMP, EMP, EMP, EMP, EMP],
-                      ]  # -1=empty, 0=red, 1=blue
+                      ]  # 0=empty, -1=red, 1=blue
         self.red_count = 2  # initial count
         self.blue_count = 2  # initial count
+        
         self.next_player = "Red"  # in each ep, red takes the first turn
+        self.current_player = RED
+        
         self.done = False
         self.next_possible_actions = self.__get_possible_actions(color="Red")
         self.__refresh_canvas()
@@ -126,14 +159,12 @@ class Reversi:
             self.canvas = cv2.putText(self.canvas, self.next_player+"'s turn", self.prompt_display_coor, font, 0.7, (0, 0, 0), 1, cv2.LINE_AA)
 
     def render(self, mode='human'):
-        assert mode in ["human", "rgb_array"], "Invalid mode, must be either \"human\" or \"rgb_array\""
+        assert mode in ["human"], "Invalid mode, must be \"human\""
         if mode == "human":
             cv2.imshow("Reversi", self.canvas)
             # cv2.imwrite(".//reversi_process//board in step {:0>2d}.png".format(self.__img_counter), self.canvas)  # save images to examine each step if needed
             # self.__img_counter += 1
             cv2.waitKey(200)
-        elif mode == "rgb_array":
-            return self.canvas  # I'm not going to use this because I do not plan to use CV methods for now
 
     def step(self, action: tuple):
         """
@@ -141,6 +172,11 @@ class Reversi:
         :return: obs, reward, done, info
         info is a dict, telling plays, whos is the next, and what are the possible actions
         """
+        print("step: ", action)
+        print("self.next_possible_actions: ", self.next_possible_actions)
+        if (action not in self.next_possible_actions):
+            print("self.next_player: ", self.next_player)
+            self.print_board()
         assert len(action) == 2, "Invalid Action"
         assert self.action_space.contains(action[0]*8+action[1]), "Invalid Action"
         assert action in self.next_possible_actions, "Invalid Action"
@@ -150,7 +186,6 @@ class Reversi:
         reward = 0.
 
         self.__put(action[0], action[1], self.next_player)
-        # reward += 1  # get reward whenever the game continues
 
         next_player = "Red" if self.next_player == "Blue" else "Blue"  # opponent's turn
         next_possible_actions = self.__get_possible_actions(next_player)
@@ -168,9 +203,6 @@ class Reversi:
         else:
             self.next_player = next_player  # it is opponent's turn
             self.next_possible_actions = next_possible_actions
-
-        # if self.__check_termination():  # I do not think I need this
-        #     done = True
 
         self.done = done
         info = {"next_player": self.next_player, "next_possible_actions": self.next_possible_actions}
@@ -191,6 +223,7 @@ class Reversi:
             if self.human_VS_machine:
                 print(conclusion)
         self.__refresh_canvas()
+        self.current_player = -self.current_player
         return self.grids, reward, done, info
 
     def __put(self, i:int, j:int, color:str):
@@ -207,8 +240,6 @@ class Reversi:
         color_opponent = GRID_STATE["Blue"] if color == "Red" else GRID_STATE["Red"]
 
         self.grids[i][j] = color_self
-        # self.red_count += 1 if color == "Red" else 0
-        # self.blue_count += 1 if color == "Blue" else 0
         flips = []
 
         def check_flip(dir, dist, opponent_cnt, i, j, candidates, flips):
@@ -336,33 +367,118 @@ class Reversi:
             mouse_X, mouse_Y = -1, -1
         return self.get_random_action()
 
+    def clone(self):
+        """
+        Creates a deep clone of the game object.
+        Returns:
+            the cloned game object.
+        """
+        game_clone = Reversi()
+        game_clone.grids = deepcopy(self.grids)
+        game_clone.current_player = self.current_player
+        return game_clone
+    
+    def play_action(self, action):
+        """
+        Plays an action on the game board.
+        Args:
+            action: A tuple in the form of (row, column).
+        """
+        self.next_player = "Red" if self.current_player == RED else "Blue"
+        self.next_possible_actions = self.__get_possible_actions(self.next_player)
+        assert len(action) == 3, "Invalid Action"
+        assert self.action_space.contains(action[1]*8+action[2]), "Invalid Action"
+        done = False
 
-if __name__ == "__main__":
-    HUMAN_vs_MACHINE = True  # Human are always Red players
-    env = Reversi(human_VS_machine=HUMAN_vs_MACHINE)
-    if HUMAN_vs_MACHINE:  # human vs machine
-        for ep in range(2):
-            obs, info = env.reset()  # {"next_player": self.next_player, "next_possible_actions":
-            env.render()  # show the initialization
-            while True:
-                if info["next_player"] == "Blue":  # machine's turn
-                    action = env.get_random_action()
-                else:  # human's turn
-                    action = env.get_human_action()
-                obs, reward, done, info = env.step(action)
-                env.render()
-                if done:
-                    break
-            cv2.waitKey(3000)  # wait for 3 seconds after the end of each ep
-    else:  # two idiots
-        for ep in range(1):
-            obs, info = env.reset()
-            env.render()  # show the initialization
-            while True:
-                action = env.get_random_action()  # no strategy, randomly select
-                obs, reward, done, info = env.step(action)
-                env.render()
-                if done:
-                    break
-    cv2.waitKey()
-    env.close()
+        self.__put(action[1], action[2], self.next_player)
+
+        next_player = "Red" if self.next_player == "Blue" else "Blue"  # opponent's turn
+        next_possible_actions = self.__get_possible_actions(next_player)
+        if not next_possible_actions:  # if there is no way to put the disk, the opponent skips
+            next_player = "Red" if self.next_player == "Red" else "Blue"  # my turn again
+            next_possible_actions = self.__get_possible_actions(next_player)
+            if not next_possible_actions:
+                self.next_possible_actions = set()
+                self.next_player = None
+                done = True  # there is no way for both players, Game Over
+            else:
+                self.next_player = next_player
+                self.next_possible_actions = next_possible_actions
+        else:
+            self.next_player = next_player  # it is opponent's turn
+            self.next_possible_actions = next_possible_actions
+
+        self.done = done
+        self.current_player = -self.current_player
+    
+    def get_valid_moves(self, current_player):
+        """
+        Returns a list of moves along with their validity.
+        Searches the board for valid sandwich moves.
+        Returns:
+            A list containing moves as (validity, row, column).
+        """
+        next_player = "Red" if current_player == RED else "Blue"
+        possible_actions = self.__get_possible_actions(next_player)
+
+        valid_moves = []
+
+        for x in range(self.row):
+            for y in range(self.column):
+                if ((x,y) in possible_actions):
+                    valid_moves.append((1, x, y))
+                else:
+                    valid_moves.append((0, None, None)) 
+        return np.array(valid_moves)
+
+    def check_game_over(self, current_player):
+        """
+        Checks if the game is over and return a possible winner.
+        There are 3 possible scenarios.
+            a) The game is over and we have a winner.
+            b) The game is over but it is a draw.
+            c) The game is not over.
+        Args:
+            current_player: An integer representing the current player.
+        Returns:
+            A bool representing the game over state.
+            An integer action value. (win: 1, loss: -1, draw: 0)
+        """
+
+        player_a = current_player
+        player_b = -current_player
+
+        player_a_moves = self.get_valid_moves(player_a)
+        player_b_moves = self.get_valid_moves(player_b)
+
+        player_a_valid_count = Counter(x[0] == 1 for x in player_a_moves)
+        player_b_valid_count = Counter(x[0] == 1 for x in player_b_moves)
+
+        # Check if both players can't play any more moves.
+        if player_a_valid_count[True] == 0 or player_b_valid_count[True] == 0:
+            _, piece_count = np.unique(self.grids, return_counts=True)
+
+            # Check for the player with the most number of pieces.
+            if piece_count[player_a] > piece_count[player_b]:
+                return True, 1
+            elif piece_count[player_a] == piece_count[player_b]:
+                return True, 0
+            else:
+                return True, -1
+        else:
+            return False, 0
+    
+    def print_board(self):
+        """Prints the board state."""
+        print("   0    1    2    3    4    5    6    7")
+        for x in range(self.row):
+            print(x, end='')
+            for y in range(self.column):
+                if self.grids[x][y] == 0:
+                    print('  -  ', end='')
+                elif self.grids[x][y] == 1:
+                    print('  X  ', end='')
+                elif self.grids[x][y] == -1:
+                    print('  O  ', end='')
+            print('\n')
+        print('\n')

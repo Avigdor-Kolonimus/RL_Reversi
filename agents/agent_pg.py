@@ -7,7 +7,6 @@ import numpy as np
 from agents.utils import Brain
 np.random.seed(47)
 
-# Policy Gradient (PG) Algorithms
 class Agent_PG(nn.Module):
     def __init__(self, player="Red", device=torch.device("cuda")):
         super(Agent_PG, self).__init__()
