@@ -172,11 +172,6 @@ class Reversi:
         :return: obs, reward, done, info
         info is a dict, telling plays, whos is the next, and what are the possible actions
         """
-        print("step: ", action)
-        print("self.next_possible_actions: ", self.next_possible_actions)
-        if (action not in self.next_possible_actions):
-            print("self.next_player: ", self.next_player)
-            self.print_board()
         assert len(action) == 2, "Invalid Action"
         assert self.action_space.contains(action[0]*8+action[1]), "Invalid Action"
         assert action in self.next_possible_actions, "Invalid Action"

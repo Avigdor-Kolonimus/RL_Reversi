@@ -66,6 +66,9 @@ class Train(object):
                 print("New model discarded and previous model loaded.")
                 # Discard current model and use previous best model.
                 self.net.load_model()
+            
+            with open("alfazero_winning_rate.csv", 'a') as win_rate_file:
+                win_rate_file.write('%d,%d,%d,%f\n' % (i + 1, wins, losses, win_rate))
 
     def play_game(self, game, training_data):
         """
@@ -80,8 +83,8 @@ class Train(object):
 
         game_over = False
         value = 0
-        self_play_data = []
         count = 0
+        self_play_data = []
 
         node = TreeNode()
 

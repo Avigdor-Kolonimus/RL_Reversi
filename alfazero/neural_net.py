@@ -237,7 +237,7 @@ class NeuralNetworkWrapper(object):
                     file_path = CFG.model_directory + CFG.loss_file
 
                     with open(file_path, 'a') as loss_file:
-                        loss_file.write('%f|%f\n' % (pi_loss, v_loss))
+                        loss_file.write('%f,%f\n' % (pi_loss, v_loss))
 
         print("\n")
 
