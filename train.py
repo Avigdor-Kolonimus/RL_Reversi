@@ -23,8 +23,8 @@ parser.add_argument("--model",
                     type=int,
                     default=0)
 def modelPG():
-    blue_check_point = "Brain_PG_Blue20000"
-    red_check_point = "Brain_PG_Red20000"
+    blue_check_point = "Brain_PG_Blue100000"
+    red_check_point = "Brain_PG_Red100000"
     agent_Blue = Agent_PG("Blue", device=device).to(device)
     agent_Red = Agent_PG("Red", device=device).to(device)
     if blue_check_point:
@@ -35,7 +35,7 @@ def modelPG():
     env = Reversi(human_VS_machine=False)
     reward_history, winning_rate = [], []
     is_Blue = []
-    max_epoch = 20000
+    max_epoch = 100000
     RENDER = False
     winning_rate_log = open("pg_winning_rate.csv", "w")
     winning_rate_log.write("episode,winning_rate\n")
@@ -93,16 +93,16 @@ def modelPG():
     winning_rate_log.close()
     loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_PG_Blue20000")
-    agent_Red.save_model("Brain_PG_Red20000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)
     plt.show()
 
 def modelDQN():
-    blue_check_point = None
-    red_check_point = None
+    blue_check_point = "Brain_DQN_prioritized_Blue100000"
+    red_check_point = "Brain_DQN_prioritized_Red100000"
     agent_Blue = Agent_DQN("Blue", device=device).to(device)
     agent_Red = Agent_DQN("Red", device=device).to(device)
     if blue_check_point:
@@ -114,7 +114,7 @@ def modelDQN():
     reward_history, winning_rate = [], []
     best_model, best_winning_rate = None, 0.  # the one obtained the highest winning rate, regardless of opponent
     is_Blue = []
-    max_epoch = 20000
+    max_epoch = 100000
     dominant_counter_blue = 0
     RENDER = False
     winning_rate_log = open("dqn_winning_rate.csv", "w")
@@ -177,17 +177,17 @@ def modelDQN():
     winning_rate_log.close()
     loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_DQN_prioritized_Blue20000")
-    agent_Red.save_model("Brain_DQN_prioritized_Red20000")
-    best_model.save_model("Brain_DQN_prioritized_Best20000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
+    best_model.save_model("Brain_DQN_prioritized_Best100000")
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)
     plt.show()
     
 def modelDDQN():
-    blue_check_point = None
-    red_check_point = None
+    blue_check_point = "Brain_DDQN_prioritized_Blue100000"
+    red_check_point = "Brain_DDQN_prioritized_Red100000"
     agent_Blue = Agent_DDQN("Blue", device=device).to(device)
     agent_Red = Agent_DDQN("Red", device=device).to(device)
     if blue_check_point:
@@ -199,7 +199,7 @@ def modelDDQN():
     reward_history, winning_rate = [], []
     best_model, best_winning_rate = None, 0.  # the one obtained the highest winning rate, regardless of opponent
     is_Blue = []
-    max_epoch = 20000
+    max_epoch = 100000
     dominant_counter_blue = 0
     RENDER = False
     winning_rate_log = open("ddqn_winning_rate.csv", "w")
@@ -261,9 +261,9 @@ def modelDDQN():
     winning_rate_log.close()
     loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_DDQN_prioritized_Blue20000")
-    agent_Red.save_model("Brain_DDQN_prioritized_Red20000")
-    best_model.save_model("Brain_DDQN_prioritized_Best20000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
+    best_model.save_model("Brain_DDQN_prioritized_Best100000")
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)

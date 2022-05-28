@@ -22,17 +22,17 @@ parser.add_argument("--model",
 
 def playPG(HUMAN_vs_MACHINE=True):
     machine = Agent_PG("Blue", device=device).to(device)
-    machine.load_model(name="Brain_PG_Blue10000")
+    machine.load_model(name="Brain_PG_Blue100000")
     play(HUMAN_vs_MACHINE, machine)
 
 def playDGN(HUMAN_vs_MACHINE=True):
     machine = Agent_DQN("Blue", device=device).to(device)
-    machine.load_model("Brain_DQN_prioritized_Blue20000")
+    machine.load_model("Brain_DQN_prioritized_Best100000")
     play(HUMAN_vs_MACHINE, machine)
 
 def playDDGN(HUMAN_vs_MACHINE=True):
     machine = Agent_DDQN("Blue", device=device).to(device)
-    machine.load_model("Brain_DDQN_prioritized_Blue20000")
+    machine.load_model("Brain_DDQN_prioritized_Best100000")
     play(HUMAN_vs_MACHINE, machine)
 
 def play(HUMAN_vs_MACHINE=True, machine=object):
@@ -77,7 +77,7 @@ def play(HUMAN_vs_MACHINE=True, machine=object):
         cv2.waitKey()
         env.close()    
 
-def playAlfaZero():
+def playAlfaZero(HUMAN_vs_MACHINE=True):
     env = Reversi()
     net = NeuralNetworkWrapper(env)
 
@@ -95,13 +95,10 @@ def playAlfaZero():
                 else:  # human's turn
                     action = game.get_human_action()
                     best_child = TreeNode()
-                    best_child.action = (1, action[0], action[1])
-            
+                    best_child.action = [1, action[0], action[1]]
+
                 action = (best_child.action[1], best_child.action[2])
                 obs, _, done, info = game.step(action)
-                # game.play_action(action)  # Play the child node's action.
-
-                # done, _ = game.check_game_over(game.current_player)
 
                 best_child.parent = None
                 node = best_child  # Make the child node the root node.
@@ -113,6 +110,38 @@ def playAlfaZero():
         cv2.waitKey()
         game.close()
         env.close()
+    else:
+        win_counter_blue = 0
+        round_max = 200
+        RENDER = False
+        for ep in range(round_max):
+            net = NeuralNetworkWrapper(env)
+            mcts = MonteCarloTreeSearch(net)
+            node = TreeNode()
+            obs, info = env.reset()  # {"next_player": self.next_player, "next_possible_actions":
+            game = env.clone()  # Create a fresh clone for each game.
+            if RENDER: game.render()  # show the initialization
+            while True:
+                if info["next_player"] == "Blue":  # machine's turn
+                    best_child = mcts.search(game, node, CFG.temp_final)
+                else:
+                    action = game.get_random_action()
+                    best_child = TreeNode()
+                    best_child.action = [1, action[0], action[1]]
+                action = (best_child.action[1], best_child.action[2])
+                obs, _, done, info = game.step(action)
+
+                best_child.parent = None
+                node = best_child  # Make the child node the root node.
+                if RENDER: game.render()
+                if done:
+                    win_counter_blue += 1 if info["winner"] == "Blue" else 0
+                    print("Round: {:d}/{:d}, winner is ".format(ep, round_max), info["winner"])
+                    break
+            cv2.waitKey(3000)  # wait for 3 seconds after the end of each ep
+        print("Winning rate of the blue player is {:.2%}".format(win_counter_blue/round_max))
+        cv2.waitKey()
+        env.close()  
 
 if __name__ == "__main__":
     arguments = parser.parse_args()
@@ -125,7 +154,7 @@ if __name__ == "__main__":
     elif arguments.model == 2:
         playDDGN(HUMAN_vs_MACHINE)
     elif arguments.model == 3:
-        playAlfaZero()
+        playAlfaZero(HUMAN_vs_MACHINE)
     else:
         print("Invalid input")
 

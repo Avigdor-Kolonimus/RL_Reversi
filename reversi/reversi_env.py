@@ -10,7 +10,6 @@ import numpy as np
 
 from gym import Env, spaces
 from copy import deepcopy
-# from reversi2.game import Game
 from collections import Counter
 
 # global variable
