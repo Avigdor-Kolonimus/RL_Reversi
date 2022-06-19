@@ -1,16 +1,12 @@
 import os
 import gym
 import cv2
-# import time
 import random
 
 import numpy as np
-# import matplotlib.pyplot as plt
-# import PIL.Image as Image
 
 from gym import Env, spaces
 from copy import deepcopy
-# from reversi2.game import Game
 from collections import Counter
 
 # global variable
@@ -133,7 +129,6 @@ class Reversi:
 
     def __refresh_canvas(self):
         self.canvas = self.board.copy()
-        #self.canvas = copy.deepcopy(self.board)  # it must be copied here
         for i in range(8):
             for j in range(8):
                 if self.grids[i][j] == GRID_STATE["Empty"]: continue
@@ -162,7 +157,7 @@ class Reversi:
         assert mode in ["human"], "Invalid mode, must be \"human\""
         if mode == "human":
             cv2.imshow("Reversi", self.canvas)
-            # cv2.imwrite(".//reversi_process//board in step {:0>2d}.png".format(self.__img_counter), self.canvas)  # save images to examine each step if needed
+            # cv2.imwrite(".//images//reversi_process//board in step {:0>2d}.png".format(self.__img_counter), self.canvas)  # save images to examine each step if needed
             # self.__img_counter += 1
             cv2.waitKey(200)
 
@@ -172,11 +167,6 @@ class Reversi:
         :return: obs, reward, done, info
         info is a dict, telling plays, whos is the next, and what are the possible actions
         """
-        print("step: ", action)
-        print("self.next_possible_actions: ", self.next_possible_actions)
-        if (action not in self.next_possible_actions):
-            print("self.next_player: ", self.next_player)
-            self.print_board()
         assert len(action) == 2, "Invalid Action"
         assert self.action_space.contains(action[0]*8+action[1]), "Invalid Action"
         assert action in self.next_possible_actions, "Invalid Action"

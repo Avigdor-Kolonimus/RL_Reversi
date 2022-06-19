@@ -87,6 +87,7 @@ class Agent_PG(nn.Module):
             return loss.item()
 
     def __discount_and_norm_rewards(self):
+        # https://www.janisklaise.com/post/rl-policy-gradients/
         # discount episode rewards
         discounted_ep_rs = np.zeros_like(self.ep_rs, dtype=np.float64)
         running_add = 0

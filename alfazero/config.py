@@ -26,9 +26,9 @@ class CFG(object):
         record_loss: Binary to record policy and value loss to a file.
         loss_file: Name of the file to record loss.
     """
-    num_iterations = 4
-    num_games = 30
-    num_mcts_sims = 30
+    num_iterations = 10
+    num_games = 100
+    num_mcts_sims = 60
     c_puct = 1
     l2_val = 0.0001
     momentum = 0.9
@@ -42,9 +42,9 @@ class CFG(object):
     dirichlet_alpha = 0.5
     epsilon = 0.25
     model_directory = "./models/"
-    num_eval_games = 12
-    eval_win_rate = 0.55
+    num_eval_games = 20
+    eval_win_rate = 0.65
     load_model = 1
     resnet_blocks = 5
     record_loss = 1
-    loss_file = "loss.txt"
+    loss_file = "alfazero_loss.csv"

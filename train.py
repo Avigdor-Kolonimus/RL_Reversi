@@ -23,8 +23,8 @@ parser.add_argument("--model",
                     type=int,
                     default=0)
 def modelPG():
-    blue_check_point = "Brain_PG_Blue10000"
-    red_check_point = "Brain_PG_Red10000"
+    blue_check_point = "Brain_PG_Blue100000"
+    red_check_point = "Brain_PG_Red100000"
     agent_Blue = Agent_PG("Blue", device=device).to(device)
     agent_Red = Agent_PG("Red", device=device).to(device)
     if blue_check_point:
@@ -35,8 +35,12 @@ def modelPG():
     env = Reversi(human_VS_machine=False)
     reward_history, winning_rate = [], []
     is_Blue = []
-    max_epoch = 10000
+    max_epoch = 100000
     RENDER = False
+    winning_rate_log = open("pg_winning_rate.csv", "w")
+    winning_rate_log.write("episode,winning_rate\n")
+    loss_log = open("pg_loss.csv", "w")
+    loss_log.write("episode,loss\n")
     for ep in range(1, max_epoch+1):
         ep_reward = []
         obs, info = env.reset()
@@ -71,6 +75,7 @@ def modelPG():
             if done:  # Game Over
                 loss = agent_Blue.learn()
                 print("ep: {:d}/{:d}, blue player taining loss value: {:.4f}".format(ep, max_epoch, loss))
+                loss_log.write('%d,%f\n' % (ep, loss))
                 is_Blue.append(True if info["winner"] == "Blue" else False)
                 break
         reward_history.append(np.sum(ep_reward))
@@ -79,22 +84,25 @@ def modelPG():
             winning_rate.append(np.mean(is_Blue))
             is_Blue = []
             print("ep: {:d}/{:d}, blue player winning rate in latest 20 rounds: {:.2%}.".format(ep, max_epoch, winning_rate[-1]))
+            winning_rate_log.write('%d,%f\n' % (ep, winning_rate[-1]))
 
         if len(winning_rate) >= 3 and all([w >= 0.65 for w in winning_rate[-3:]]):
             agent_Red.weights_assign(agent_Blue.brain)
             print("ep: {:d}/{:d}, red player updated.".format(ep, max_epoch))
 
+    winning_rate_log.close()
+    loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_PG_Blue10000")
-    agent_Red.save_model("Brain_PG_Red10000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)
     plt.show()
 
 def modelDQN():
-    blue_check_point = None
-    red_check_point = None
+    blue_check_point = "Brain_DQN_prioritized_Blue100000"
+    red_check_point = "Brain_DQN_prioritized_Red100000"
     agent_Blue = Agent_DQN("Blue", device=device).to(device)
     agent_Red = Agent_DQN("Red", device=device).to(device)
     if blue_check_point:
@@ -106,9 +114,13 @@ def modelDQN():
     reward_history, winning_rate = [], []
     best_model, best_winning_rate = None, 0.  # the one obtained the highest winning rate, regardless of opponent
     is_Blue = []
-    max_epoch = 20000
+    max_epoch = 100000
     dominant_counter_blue = 0
     RENDER = False
+    winning_rate_log = open("dqn_winning_rate.csv", "w")
+    winning_rate_log.write("episode,winning_rate\n")
+    loss_log = open("dqn_loss.csv", "w")
+    loss_log.write("episode,loss\n")
     for ep in range(1, max_epoch + 1):
         ep_reward = []
         obs, info = env.reset()
@@ -141,6 +153,7 @@ def modelDQN():
                 loss = agent_Blue.learn()
                 print("ep: {:d}/{:d}, blue player taining loss value: {:.4f}".format(ep, max_epoch, loss))
                 is_Blue.append(True if info["winner"] == "Blue" else False)
+                loss_log.write('%d,%f\n' % (ep, loss))
                 break
         reward_history.append(np.sum(ep_reward))
 
@@ -151,6 +164,7 @@ def modelDQN():
             if best_winning_rate <= winning_rate[-1]:
                 best_model = copy.deepcopy(agent_Blue)
                 best_winning_rate = winning_rate[-1]
+                winning_rate_log.write('%d,%f\n' % (ep, winning_rate[-1]))
             if winning_rate[-1] >= 0.60:
                 dominant_counter_blue += 1
             else:
@@ -160,18 +174,20 @@ def modelDQN():
                 agent_Red.weights_assign(agent_Blue.brain_evl)
                 print("ep: {:d}/{:d}, red player updated.".format(ep, max_epoch))
 
+    winning_rate_log.close()
+    loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_DQN_prioritized_Blue20000")
-    agent_Red.save_model("Brain_DQN_prioritized_Red20000")
-    best_model.save_model("Brain_DQN_prioritized_Best20000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
+    best_model.save_model("Brain_DQN_prioritized_Best100000")
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)
     plt.show()
     
 def modelDDQN():
-    blue_check_point = None
-    red_check_point = None
+    blue_check_point = "Brain_DDQN_prioritized_Blue100000"
+    red_check_point = "Brain_DDQN_prioritized_Red100000"
     agent_Blue = Agent_DDQN("Blue", device=device).to(device)
     agent_Red = Agent_DDQN("Red", device=device).to(device)
     if blue_check_point:
@@ -183,9 +199,13 @@ def modelDDQN():
     reward_history, winning_rate = [], []
     best_model, best_winning_rate = None, 0.  # the one obtained the highest winning rate, regardless of opponent
     is_Blue = []
-    max_epoch = 20000
+    max_epoch = 100000
     dominant_counter_blue = 0
     RENDER = False
+    winning_rate_log = open("ddqn_winning_rate.csv", "w")
+    winning_rate_log.write("episode,winning_rate\n")
+    loss_log = open("ddqn_loss.csv", "w")
+    loss_log.write("episode,loss\n")
     for ep in range(1, max_epoch + 1):
         ep_reward = []
         obs, info = env.reset()
@@ -217,6 +237,7 @@ def modelDDQN():
                 loss = agent_Blue.learn()
                 print("ep: {:d}/{:d}, blue player taining loss value: {:.4f}".format(ep, max_epoch, loss))
                 is_Blue.append(True if info["winner"] == "Blue" else False)
+                loss_log.write('%d,%f\n' % (ep, loss))
                 break
         reward_history.append(np.sum(ep_reward))
 
@@ -227,6 +248,7 @@ def modelDDQN():
             if best_winning_rate <= winning_rate[-1]:
                 best_model = copy.deepcopy(agent_Blue)
                 best_winning_rate = winning_rate[-1]
+                winning_rate_log.write('%d,%f\n' % (ep, winning_rate[-1]))
             if winning_rate[-1] >= 0.60:
                 dominant_counter_blue += 1
             else:
@@ -236,10 +258,12 @@ def modelDDQN():
                 agent_Red.weights_assign(agent_Blue.brain_evl)
                 print("ep: {:d}/{:d}, red player updated.".format(ep, max_epoch))
 
+    winning_rate_log.close()
+    loss_log.close()
     # end of training
-    agent_Blue.save_model("Brain_DDQN_prioritized_Blue20000")
-    agent_Red.save_model("Brain_DDQN_prioritized_Red20000")
-    best_model.save_model("Brain_DDQN_prioritized_Best20000")
+    agent_Blue.save_model(blue_check_point)
+    agent_Red.save_model(red_check_point)
+    best_model.save_model("Brain_DDQN_prioritized_Best100000")
     # plot
     plt.figure("Blue winning rate")
     plt.plot(range(0, max_epoch, 20), winning_rate)

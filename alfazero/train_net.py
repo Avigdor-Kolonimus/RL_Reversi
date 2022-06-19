@@ -20,6 +20,8 @@ class Train(object):
 
     def start(self):
         """Main training loop."""
+        num_games = CFG.num_eval_games
+        eval_win_rate = CFG.eval_win_rate
         for i in range(CFG.num_iterations):
             print("Iteration", i + 1)
 
@@ -48,8 +50,7 @@ class Train(object):
 
             print("wins:", wins)
             print("losses:", losses)
-
-            num_games = wins + losses
+            print("draw:", num_games - wins - losses)
 
             if num_games == 0:
                 win_rate = 0
@@ -58,7 +59,7 @@ class Train(object):
 
             print("win rate:", win_rate)
 
-            if win_rate > CFG.eval_win_rate:
+            if win_rate > eval_win_rate:
                 # Save current model as the best model.
                 print("New model saved as best model.")
                 self.net.save_model("best_model")
@@ -66,6 +67,9 @@ class Train(object):
                 print("New model discarded and previous model loaded.")
                 # Discard current model and use previous best model.
                 self.net.load_model()
+            
+            with open("alfazero_winning_rate.csv", 'a') as win_rate_file:
+                win_rate_file.write('%d,%d,%d,%f\n' % (i + 1, wins, losses, win_rate))
 
     def play_game(self, game, training_data):
         """
@@ -80,8 +84,8 @@ class Train(object):
 
         game_over = False
         value = 0
-        self_play_data = []
         count = 0
+        self_play_data = []
 
         node = TreeNode()
 
